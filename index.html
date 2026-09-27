@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aviation Safety Risk-Trend Dashboard (Illustrative)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f6f7; --panel:#ffffff; --border:#dfe2e5; --text:#20242a; --muted:#6a737d;
+    --navy:#2c3e50; --slate:#5a7789; --grey-accent:#8a94a3;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:'Source Sans 3', sans-serif; padding:30px 34px 60px; }
+  .num{ font-family:'JetBrains Mono', monospace; }
+
+  .disclaimer{
+    background:#fff8e6; border:1px solid #e8d9a8; color:#6b5a1f;
+    padding:12px 16px; border-radius:5px; font-size:13.5px; margin-bottom:22px; line-height:1.5;
+  }
+  .disclaimer b{ color:#4a3d10; }
+
+  header{ border-bottom:2px solid var(--navy); padding-bottom:16px; margin-bottom:22px; }
+  header h1{ font-size:26px; margin:0; color:var(--navy); font-weight:700; }
+  header p{ margin:6px 0 0; color:var(--muted); font-size:14.5px; }
+
+  .metrics-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:22px; }
+  .metric{ background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:16px 18px; }
+  .metric .label{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:6px;}
+  .metric .value{ font-size:26px; font-weight:600; color:var(--navy); }
+
+  .grid{ display:grid; grid-template-columns:1.3fr 1fr; gap:18px; margin-bottom:18px; }
+  .panel{ background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:18px 20px; }
+  .panel h2{ font-size:15.5px; margin:0 0 4px; color:var(--navy); font-weight:600;}
+  .panel .desc{ font-size:12.5px; color:var(--muted); margin-bottom:14px; }
+  canvas{ max-height:290px; }
+
+  .cause-list{ list-style:none; margin:0; padding:0; }
+  .cause-list li{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef0f2; font-size:14px; }
+  .cause-list li span.count{ font-family:'JetBrains Mono',monospace; color:var(--muted); }
+
+  footer{ margin-top:26px; color:var(--muted); font-size:12px; border-top:1px solid var(--border); padding-top:14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Aviation Safety Risk-Trend Dashboard</h1>
+  <p>Illustrative risk-category and corrective-action reporting methodology</p>
+</header>
+
+<div class="disclaimer">
+  <b>Illustrative synthetic data only.</b> This dashboard does not represent, reference, or estimate
+  any real aircraft, airline, flight, incident, or fatality. All category labels and counts below
+  are randomly generated to demonstrate a risk-trend reporting and root-cause tracking methodology —
+  not to report on any real safety event.
+</div>
+
+<div class="metrics-row" id="metricsRow"></div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Reported Events by Risk Category — Trend</h2>
+    <div class="desc">Quarterly counts across illustrative risk categories.</div>
+    <canvas id="trendChart"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Severity Tier Distribution</h2>
+    <div class="desc">Reportable events by internal severity classification.</div>
+    <canvas id="severityChart"></canvas>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Corrective Action Status</h2>
+    <canvas id="statusChart"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Top Root Causes</h2>
+    <ul class="cause-list" id="causeList"></ul>
+  </div>
+</div>
+
+<footer>
+  Illustrative demo project · Python (numpy) for data generation, Chart.js for visualization · <span class="num">github.com/&lt;your-username&gt;/aviation-safety-dashboard</span>
+</footer>
+
+<script>
+Chart.defaults.color = '#6a737d';
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 10.5;
+
+const PALETTE = ['#2c3e50','#5a7789','#8a94a3','#a9b4bd','#c7cfd6','#3e5568'];
+
+async function loadData(){ return (await fetch('data.json')).json(); }
+
+function renderMetrics(s){
+  const items = [
+    { label:'Total Events Logged', value: s.total_events_logged },
+    { label:'% Corrective Actions Closed', value: s.pct_closed + '%' },
+    { label:'Avg Events / Quarter', value: s.avg_quarterly_events },
+  ];
+  document.getElementById('metricsRow').innerHTML = items.map(i=>`
+    <div class="metric"><div class="label">${i.label}</div><div class="value num">${i.value}</div></div>
+  `).join('');
+}
+
+function renderTrend(quarters, catTrend){
+  const datasets = Object.entries(catTrend).map(([cat,vals],i)=>({
+    label:cat, data:vals, borderColor:PALETTE[i%PALETTE.length], backgroundColor:'transparent',
+    borderWidth:2, pointRadius:0, tension:0.2
+  }));
+  new Chart(document.getElementById('trendChart'), {
+    type:'line',
+    data:{ labels:quarters, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ x:{ ticks:{maxTicksLimit:8}, grid:{color:'#eef0f2'} }, y:{ grid:{color:'#eef0f2'}, beginAtZero:true } },
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, font:{size:10} } } }
+    }
+  });
+}
+
+function renderSeverity(tiers){
+  new Chart(document.getElementById('severityChart'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(tiers), datasets:[{ data:Object.values(tiers), backgroundColor:['#5a7789','#8a94a3','#2c3e50'] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, font:{size:9.5} } } } }
+  });
+}
+
+function renderStatus(status){
+  new Chart(document.getElementById('statusChart'), {
+    type:'bar',
+    data:{ labels:Object.keys(status), datasets:[{ data:Object.values(status), backgroundColor:['#3e5568','#8a94a3','#c7cfd6'] }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{display:false}}, y:{grid:{color:'#eef0f2'}} }, plugins:{ legend:{ display:false } } }
+  });
+}
+
+function renderCauses(causes){
+  document.getElementById('causeList').innerHTML = causes.map(c=>`
+    <li><span>${c.cause}</span><span class="count">${c.count}</span></li>
+  `).join('');
+}
+
+loadData().then(d=>{
+  renderMetrics(d.summary);
+  renderTrend(d.quarters, d.category_trend);
+  renderSeverity(d.severity_tiers);
+  renderStatus(d.status_breakdown);
+  renderCauses(d.root_causes);
+}).catch(err=>{
+  document.body.innerHTML = '<p style="padding:40px;font-family:monospace;color:#8a5a2c;">Could not load data.json — serve this folder with a local server (not file://) and make sure data.json is present.</p>';
+  console.error(err);
+});
+</script>
+</body>
+</html>

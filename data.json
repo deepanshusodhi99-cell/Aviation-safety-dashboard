@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "note": "ILLUSTRATIVE SYNTHETIC DATA ONLY. Does not represent any real aircraft, airline, incident, or fatality. Category labels and counts are randomly generated to demonstrate a risk-trend reporting methodology, not to report on any real event."
+  },
+  "summary": {
+    "total_events_logged": 254,
+    "pct_closed": 80.2,
+    "avg_quarterly_events": 119.8
+  },
+  "quarters": [
+    "Q1 Yr1",
+    "Q2 Yr1",
+    "Q3 Yr1",
+    "Q4 Yr1",
+    "Q1 Yr2",
+    "Q2 Yr2",
+    "Q3 Yr2",
+    "Q4 Yr2",
+    "Q1 Yr3",
+    "Q2 Yr3",
+    "Q3 Yr3",
+    "Q4 Yr3"
+  ],
+  "category_trend": {
+    "Mechanical / Systems": [
+      27,
+      26,
+      27,
+      26,
+      29,
+      33,
+      29,
+      29,
+      32,
+      32,
+      32,
+      30
+    ],
+    "Human Factors": [
+      22,
+      17,
+      19,
+      15,
+      17,
+      15,
+      19,
+      17,
+      20,
+      20,
+      19,
+      13
+    ],
+    "Weather / Environmental": [
+      25,
+      21,
+      23,
+      22,
+      23,
+      27,
+      23,
+      25,
+      27,
+      23,
+      25,
+      25
+    ],
+    "Maintenance Procedure": [
+      24,
+      28,
+      31,
+      23,
+      29,
+      27,
+      25,
+      32,
+      28,
+      23,
+      26,
+      28
+    ],
+    "Air Traffic Coordination": [
+      11,
+      13,
+      15,
+      10,
+      13,
+      11,
+      13,
+      9,
+      11,
+      12,
+      15,
+      16
+    ],
+    "Documentation / Compliance": [
+      9,
+      12,
+      5,
+      9,
+      9,
+      13,
+      11,
+      8,
+      8,
+      8,
+      12,
+      7
+    ]
+  },
+  "severity_tiers": {
+    "Tier 1 \u2014 Reportable, no operational impact": 157,
+    "Tier 2 \u2014 Minor operational impact": 82,
+    "Tier 3 \u2014 Significant, corrective action required": 15
+  },
+  "status_breakdown": {
+    "Closed": 190,
+    "In Review": 29,
+    "Open": 18
+  },
+  "root_causes": [
+    {
+      "cause": "Procedural deviation",
+      "count": 68
+    },
+    {
+      "cause": "Component wear/fatigue",
+      "count": 47
+    },
+    {
+      "cause": "Communication gap",
+      "count": 29
+    },
+    {
+      "cause": "Training gap",
+      "count": 24
+    },
+    {
+      "cause": "Documentation error",
+      "count": 11
+    }
+  ]
+}
