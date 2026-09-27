@@ -52,4 +52,4 @@ python -m http.server 8000
 ## Live demo
 
 Enable GitHub Pages (Settings → Pages → deploy from `main`, root):
-`https://<your-username>.github.io/aviation-safety-dashboard/`
+`https://deepanshusodhi99-cell .github.io/aviation-safety-dashboard/`
