@@ -1,97 +1,112 @@
 """
 generate_data.py
 
-Generates an ILLUSTRATIVE, SYNTHETIC dataset for a generic aviation safety
-risk-trend dashboard portfolio project.
+Uses the REAL National Transportation Safety Board (NTSB) civil aviation
+accident/incident database (public domain, 1948-2023; ~90,000 records)
+to analyze safety trends for Boeing aircraft.
 
-IMPORTANT: This dataset does NOT represent, reference, or estimate any real
-aircraft, airline, flight, incident, or fatality. It contains no dates,
-locations, aircraft identifiers, or casualty figures tied to any real event.
-It exists only to demonstrate a risk-category trend analysis and reporting
-methodology (the kind used in aviation safety management systems), using
-made-up category labels and counts.
+Source: NTSB Aviation Accident Database & Synopses (public dataset,
+downloaded from a public GitHub mirror of the Kaggle-hosted CSV:
+https://github.com/pyamin1878/Airline_DS_Project).
+
+IMPORTANT — what this is and isn't:
+- This covers ALL Boeing aircraft models in the NTSB database (not just the
+  737), across all eras (1948-2023), and includes everything from minor
+  incidents to fatal accidents as separately classified by the NTSB.
+- All figures shown are AGGREGATE counts and rates (by decade, phase of
+  flight, weather, engine configuration) -- not individual crash narratives,
+  names, or identifying details of any specific event.
+- This is a real, publicly available dataset used widely in data-analysis
+  coursework and portfolios; it is not a claim of specialized aviation-safety
+  domain expertise beyond what the aggregate analysis itself demonstrates.
 
 Run: python generate_data.py
+Requires: Aviation_Data_raw.csv (in the same folder)
 Output: data.json
 """
 
 import json
 import numpy as np
+import pandas as pd
 
-rng = np.random.default_rng(seed=7)
+df = pd.read_csv("Aviation_Data_raw.csv", low_memory=False)
+df["Make"] = df["Make"].astype(str).str.strip().str.upper()
 
-RISK_CATEGORIES = [
-    "Mechanical / Systems",
-    "Human Factors",
-    "Weather / Environmental",
-    "Maintenance Procedure",
-    "Air Traffic Coordination",
-    "Documentation / Compliance",
-]
+boeing = df[df["Make"] == "BOEING"].copy()
+boeing["Event.Date"] = pd.to_datetime(boeing["Event.Date"], errors="coerce")
+boeing["Decade"] = (boeing["Event.Date"].dt.year // 10 * 10).astype("Int64")
 
-QUARTERS = [f"Q{q} Yr{y}" for y in range(1, 4) for q in range(1, 5)]
+for col in ["Total.Fatal.Injuries", "Total.Serious.Injuries", "Total.Minor.Injuries", "Total.Uninjured"]:
+    boeing[col] = pd.to_numeric(boeing[col], errors="coerce").fillna(0)
 
-# ---- Reported safety events by category, per quarter (counts, illustrative) ----
-category_trend = {}
-for cat in RISK_CATEGORIES:
-    base = rng.integers(8, 30)
-    drift = rng.uniform(-0.03, 0.02)  # slow illustrative trend
-    series = []
-    for i in range(len(QUARTERS)):
-        val = max(0, int(base * (1 + drift * i) + rng.normal(0, 2.5)))
-        series.append(val)
-    category_trend[cat] = series
+# ---- Records by decade ----
+by_decade = (
+    boeing.dropna(subset=["Decade"])
+    .groupby("Decade")
+    .size()
+    .reset_index(name="count")
+    .sort_values("Decade")
+)
+decade_trend = [{"decade": f"{int(r['Decade'])}s", "count": int(r["count"])} for _, r in by_decade.iterrows()]
 
-# ---- Severity tier distribution (illustrative, no real fatality data) ----
-severity_tiers = {
-    "Tier 1 — Reportable, no operational impact": int(rng.integers(140, 210)),
-    "Tier 2 — Minor operational impact": int(rng.integers(60, 100)),
-    "Tier 3 — Significant, corrective action required": int(rng.integers(15, 35)),
-}
+# ---- Injury severity breakdown ----
+sev = boeing["Injury.Severity"].fillna("").astype(str).str.strip()
+sev_clean = sev.apply(lambda s: "Fatal" if s.startswith("Fatal") else ("Non-Fatal" if s == "Non-Fatal" else ("Incident" if s == "Incident" else "Unknown/Other")))
+severity_counts = sev_clean.value_counts().to_dict()
 
-# ---- Corrective action status (illustrative) ----
-status_breakdown = {
-    "Closed": int(rng.integers(180, 240)),
-    "In Review": int(rng.integers(20, 45)),
-    "Open": int(rng.integers(8, 20)),
-}
+# ---- Broad phase of flight ----
+phase_counts = (
+    boeing["Broad.phase.of.flight"].astype(str).str.strip().replace({"nan": "Unknown"})
+    .value_counts().head(8).to_dict()
+)
 
-# ---- Root cause tags (illustrative) ----
-root_causes = [
-    {"cause": "Procedural deviation", "count": int(rng.integers(30, 70))},
-    {"cause": "Component wear/fatigue", "count": int(rng.integers(25, 60))},
-    {"cause": "Communication gap", "count": int(rng.integers(15, 40))},
-    {"cause": "Training gap", "count": int(rng.integers(10, 35))},
-    {"cause": "Documentation error", "count": int(rng.integers(10, 30))},
-]
-root_causes = sorted(root_causes, key=lambda x: x["count"], reverse=True)
+# ---- Weather condition ----
+weather_counts = (
+    boeing["Weather.Condition"].astype(str).str.strip().replace({"nan": "Unknown", "UNK": "Unknown"})
+    .value_counts().head(6).to_dict()
+)
+
+# ---- Aircraft damage ----
+damage_counts = (
+    boeing["Aircraft.damage"].astype(str).str.strip().replace({"nan": "Unknown"})
+    .value_counts().to_dict()
+)
+
+# ---- Engine type ----
+engine_counts = (
+    boeing["Engine.Type"].astype(str).str.strip().replace({"nan": "Unknown"})
+    .value_counts().head(6).to_dict()
+)
 
 summary = {
-    "total_events_logged": sum(severity_tiers.values()),
-    "pct_closed": round(100 * status_breakdown["Closed"] / sum(status_breakdown.values()), 1),
-    "avg_quarterly_events": round(
-        sum(sum(v) for v in category_trend.values()) / len(QUARTERS), 1
-    ),
+    "total_boeing_records": int(len(boeing)),
+    "date_range": f"{int(boeing['Event.Date'].dt.year.min())}\u2013{int(boeing['Event.Date'].dt.year.max())}",
+    "total_fatal_events": int((sev_clean == "Fatal").sum()),
+    "pct_fatal": round(100 * (sev_clean == "Fatal").sum() / len(boeing), 1),
+    "total_fatalities_recorded": int(boeing["Total.Fatal.Injuries"].sum()),
 }
 
 output = {
     "meta": {
+        "source": "NTSB Aviation Accident Database & Synopses (public dataset, 1948\u20132023)",
         "note": (
-            "ILLUSTRATIVE SYNTHETIC DATA ONLY. Does not represent any real "
-            "aircraft, airline, incident, or fatality. Category labels and "
-            "counts are randomly generated to demonstrate a risk-trend "
-            "reporting methodology, not to report on any real event."
+            "Real NTSB records for all Boeing aircraft models in the database, aggregated "
+            "by decade, phase of flight, weather, damage, and engine type. No individual "
+            "event narratives, names, or identifying details are shown \u2014 aggregate "
+            "counts only."
         ),
     },
     "summary": summary,
-    "quarters": QUARTERS,
-    "category_trend": category_trend,
-    "severity_tiers": severity_tiers,
-    "status_breakdown": status_breakdown,
-    "root_causes": root_causes,
+    "decade_trend": decade_trend,
+    "severity_counts": severity_counts,
+    "phase_counts": phase_counts,
+    "weather_counts": weather_counts,
+    "damage_counts": damage_counts,
+    "engine_counts": engine_counts,
 }
 
 with open("data.json", "w") as f:
     json.dump(output, f, indent=2)
 
-print("Wrote data.json (illustrative synthetic data)")
+print(f"Boeing records: {len(boeing)}  |  Fatal events: {summary['total_fatal_events']} ({summary['pct_fatal']}%)")
+print("Wrote data.json")
